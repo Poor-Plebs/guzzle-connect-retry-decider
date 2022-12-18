@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PoorPlebs\GuzzleConnectRetryDecider\Tests;
 
+use Closure;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ConnectException;
 use GuzzleHttp\Handler\MockHandler;
@@ -11,14 +12,78 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\Psr7\Utils;
+use GuzzleHttp\RequestOptions;
 use PHPUnit\Framework\TestCase;
 use PoorPlebs\GuzzleConnectRetryDecider\ConnectRetryDecider;
+use stdClass;
 
 /**
  * @coversDefaultClass \PoorPlebs\GuzzleConnectRetryDecider\ConnectRetryDecider
  */
 class ConnectRetryDeciderTest extends TestCase
 {
+    /**
+     * @test
+     * @covers \PoorPlebs\GuzzleConnectRetryDecider\ConnectRetryDecider
+     */
+    public function it_calls_on_before_retry_closure_before_retry(): void
+    {
+        $stream = Utils::streamFor('');
+        $request = new Request(
+            'GET',
+            'https://sometest.com/information',
+            [
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+                'User-Agent' => 'GuzzleHttp/7',
+            ],
+            $stream,
+        );
+
+        $exception = new ConnectException(
+            'cURL error 28: Operation timed out after 5001 milliseconds with 0 bytes received (see https://curl.haxx.se/libcurl/c/libcurl-errors.html) for https://sometest.com/information',
+            $request,
+            null,
+        );
+
+        $mockHttpHandler = new MockHandler([
+            $exception,
+            new Response(200, ['Content-Type' => 'application/json'], '{"ok":true}'),
+        ]);
+
+        $shouldBeCalled = $this->getMockBuilder(stdClass::class)
+            ->addMethods(['__invoke'])
+            ->getMock();
+
+        $shouldBeCalled
+            ->expects($this->once())
+            ->method('__invoke')
+            ->with(0, $request, $exception);
+
+        $handlerStack = HandlerStack::create($mockHttpHandler);
+        $handlerStack->push(
+            Middleware::retry(new ConnectRetryDecider(onBeforeRetry: Closure::fromCallable($shouldBeCalled))),
+            'connect_retry',
+        );
+
+        $client = new Client([
+            'base_uri' => 'https://sometest.com/',
+            'handler' => $handlerStack,
+            RequestOptions::HEADERS => [
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+            ],
+        ]);
+
+        $client->getAsync(
+            'information',
+            [
+                'body' => $stream,
+            ]
+        )->wait(true);
+    }
+
     /**
      * @test
      * @covers \PoorPlebs\GuzzleConnectRetryDecider\ConnectRetryDecider
