@@ -1,0 +1,76 @@
+{
+    "name": "poor-plebs/package-template",
+    "description": "Put a short one or two sentence description of the package.",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "PoorPlebs\\PackageTemplate\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "PoorPlebs\\PackageTemplate\\Tests\\": "tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "John Doe",
+            "email": "john.doe@example.com"
+        }
+    ],
+    "archive": {
+        "exclude": [
+            "/.editorconfig",
+            "/.git",
+            "/.gitattributes",
+            "/.github",
+            "/.gitignore",
+            "/.php-cs-fixer.dist.php",
+            "/cache",
+            "/CHANGELOG.md",
+            "/composer.lock",
+            "/phpstan.neon.dist",
+            "/phpunit.xml.dist",
+            "/tests"
+        ]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^3.13.0",
+        "phpstan/phpstan": "^1.9.0",
+        "phpunit/phpunit": "^9.5.26",
+        "roave/security-advisories": "dev-latest"
+    },
+    "require": {
+        "php": "^8.0.0"
+    },
+    "scripts": {
+        "all": [
+            "composer lint",
+            "composer csf",
+            "composer static",
+            "composer coverage"
+        ],
+        "ci": [
+            "composer lint",
+            "composer cs",
+            "composer static",
+            "composer coverage"
+        ],
+        "lint": "XDEBUG_MODE=off find . -not -path './vendor/*' -type f -name '*.php' -print0 | xargs -0 -n1 -P$(nproc) php -l -n | (! grep -v \"No syntax errors detected\" )",
+        "cs": "XDEBUG_MODE=off PHP_CS_FIXER_IGNORE_ENV=true vendor/bin/php-cs-fixer fix --dry-run  --verbose --ansi",
+        "csf": "XDEBUG_MODE=off PHP_CS_FIXER_IGNORE_ENV=true vendor/bin/php-cs-fixer fix --verbose --ansi",
+        "static": "XDEBUG_MODE=off vendor/bin/phpstan --ansi --no-progress --memory-limit=4G analyse",
+        "test": "XDEBUG_MODE=off vendor/bin/phpunit --no-coverage",
+        "coverage": "XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-text",
+        "coverage-html": "XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-text --coverage-html=coverage",
+        "coverage-clover": "XDEBUG_MODE=coverage vendor/bin/phpunit --coverage-text --coverage-clover=clover.xml"
+    }
+}
