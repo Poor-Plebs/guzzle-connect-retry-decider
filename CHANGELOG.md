@@ -16,14 +16,14 @@ The format is based on [Keep a Changelog][1], and this project adheres to
 
 ## [Unreleased]
 
-## [1.0.0] - 2022-11-05
+## [1.0.0] - 2022-12-18
 
 ### Added
 
-- Initial version of the `poor-plebs/package-template`.
+- Initial version of the `poor-plebs/guzzle-connect-retry-decider`.
 
 [1]: https://keepachangelog.com/en/1.1.0/
 [2]: https://semver.org/spec/v2.0.0.html
 
-[Unreleased]: https://github.com/Poor-Plebs/package-template/compare/1.0.0...HEAD
-[1.0.0]: https://github.com/Poor-Plebs/package-template/releases/1.0.0
+[Unreleased]: https://github.com/Poor-Plebs/guzzle-connect-retry-decider/compare/1.0.0...HEAD
+[1.0.0]: https://github.com/Poor-Plebs/guzzle-connect-retry-decider/releases/1.0.0

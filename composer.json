@@ -1,22 +1,22 @@
 {
-    "name": "poor-plebs/package-template",
-    "description": "Put a short one or two sentence description of the package.",
+    "name": "poor-plebs/guzzle-connect-retry-decider",
+    "description": "A guzzle retry middleware decider that re-attempts requests whenever a connection fails to be established. Always retries up to x times for GET requests and under specific conditions also for other HTTP methods.",
     "type": "library",
     "license": "MIT",
     "autoload": {
         "psr-4": {
-            "PoorPlebs\\PackageTemplate\\": "src/"
+            "PoorPlebs\\GuzzleConnectRetryDecider\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "PoorPlebs\\PackageTemplate\\Tests\\": "tests/"
+            "PoorPlebs\\GuzzleConnectRetryDecider\\Tests\\": "tests/"
         }
     },
     "authors": [
         {
-            "name": "John Doe",
-            "email": "john.doe@example.com"
+            "name": "Petr Levtonov",
+            "email": "petr@levtonov.com"
         }
     ],
     "archive": {
@@ -49,7 +49,9 @@
         "roave/security-advisories": "dev-latest"
     },
     "require": {
-        "php": "^8.0.0"
+        "php": "^8.1.0",
+        "guzzlehttp/guzzle": "^6.5.8 || ^7.4.5",
+        "psr/http-message": "^1.0.0"
     },
     "scripts": {
         "all": [
