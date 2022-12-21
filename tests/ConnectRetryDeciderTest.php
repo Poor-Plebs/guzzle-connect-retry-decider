@@ -122,6 +122,7 @@ class ConnectRetryDeciderTest extends TestCase
             RequestOptions::HEADERS => [
                 'Accept' => 'application/json',
                 'Content-Type' => 'application/json',
+                'User-Agent' => 'GuzzleHttp/7',
             ],
         ]);
 
