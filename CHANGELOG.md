@@ -16,6 +16,13 @@ The format is based on [Keep a Changelog][1], and this project adheres to
 
 ## [Unreleased]
 
+## [1.1.0] - 2022-12-21
+
+### Added
+
+- Added support for an on before retry callback, which is executed when it is
+  decided to retry.
+
 ## [1.0.0] - 2022-12-18
 
 ### Added
