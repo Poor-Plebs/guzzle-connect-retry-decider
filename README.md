@@ -46,7 +46,20 @@ $handlerStack = HandlerStack::create();
 // Where to put this middleware in the middleware stack depends on your usecase.
 // Usually just before the handler on top or before a log middleware.
 $handlerStack->push(
-    Middleware::retry(new ConnectRetryDecider()),
+    Middleware::retry(new ConnectRetryDecider(
+        maxRetries: 3,
+        onBeforeRetry: function (
+            int $retries,
+            RequestInterface $request,
+            Throwable $exception
+        ): void {
+            /* Optional closure that is executed just before the retry is done.
+             * At this point it is already decided that we will retry.
+             *
+             * Can be used to log the following retry or do some other action.
+             */
+        }
+    )),
     'connect_retry',
 );
 
@@ -57,6 +70,11 @@ $client = new Client([
 
 $client->getAsync('information')->wait();
 ```
+
+The `maxRetries` and `onBeforeRetry` are both optional. Max retries defaults to
+3 retries. If provided, the `onBeforeRetry` will be executed right before a
+retry. The callback receives the number of retries already done, the request
+instance and the exception that caused the previous attempt to fail.
 
 ## How to contribute?
 
