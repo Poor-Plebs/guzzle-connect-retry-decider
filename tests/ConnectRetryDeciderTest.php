@@ -16,13 +16,62 @@ use GuzzleHttp\Psr7\Utils;
 use GuzzleHttp\RequestOptions;
 use PHPUnit\Framework\TestCase;
 use PoorPlebs\GuzzleConnectRetryDecider\ConnectRetryDecider;
+use Psr\Http\Message\RequestInterface;
 use stdClass;
+use Throwable;
 
 /**
  * @coversDefaultClass \PoorPlebs\GuzzleConnectRetryDecider\ConnectRetryDecider
  */
 class ConnectRetryDeciderTest extends TestCase
 {
+    /**
+     * @test
+     * @covers \PoorPlebs\GuzzleConnectRetryDecider\ConnectRetryDecider
+     */
+    public function it_calls_on_before_retry(): void
+    {
+        $mockHttpHandler = new MockHandler([
+            new ConnectException(
+                'cURL error 28: Operation timed out after 5001 milliseconds with 0 bytes received (see https://curl.haxx.se/libcurl/c/libcurl-errors.html) for https://sometest.com/information',
+                new Request('GET', 'information', ['Accept' => 'application/json', 'Content-Type' => 'application/json']),
+            ),
+            new ConnectException(
+                'cURL error 28: Operation timed out after 5001 milliseconds with 0 bytes received (see https://curl.haxx.se/libcurl/c/libcurl-errors.html) for https://sometest.com/information',
+                new Request('GET', 'information', ['Accept' => 'application/json', 'Content-Type' => 'application/json']),
+            ),
+            new Response(200, ['Content-Type' => 'application/json'], '{"ok":true}'),
+        ]);
+
+        $testVal = 0;
+        $handlerStack = HandlerStack::create($mockHttpHandler);
+        $handlerStack->push(
+            Middleware::retry(new ConnectRetryDecider(
+                maxRetries: 3,
+                onBeforeRetry: function (
+                    int $retries,
+                    RequestInterface $request,
+                    Throwable $exception
+                ) use (&$testVal): void {
+                    ++$testVal;
+                },
+            )),
+            'connect_retry',
+        );
+
+        $client = new Client([
+            'base_uri' => 'https://sometest.com/',
+            'handler' => $handlerStack,
+        ]);
+
+        /** @var \Psr\Http\Message\ResponseInterface $response */
+        $response = $client->getAsync('information')->wait();
+
+        $this->assertSame('{"ok":true}', (string)$response->getBody());
+
+        $this->assertSame(2, $testVal);
+    }
+
     /**
      * @test
      * @covers \PoorPlebs\GuzzleConnectRetryDecider\ConnectRetryDecider

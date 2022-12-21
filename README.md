@@ -71,6 +71,11 @@ $client = new Client([
 $client->getAsync('information')->wait();
 ```
 
+The `maxRetries` and `onBeforeRetry` are both optional. Max retries defaults to
+3 retries. If provided, the `onBeforeRetry` will be executed right before a
+retry. The callback receives the number of retries already done, the request
+instance and the exception that caused the previous attempt to fail.
+
 ## How to contribute?
 
 `poor-plebs/guzzle-connect-retry-decider` follows semantic versioning. Read more
