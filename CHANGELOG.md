@@ -16,6 +16,12 @@ The format is based on [Keep a Changelog][1], and this project adheres to
 
 ## [Unreleased]
 
+## [1.1.1] - 2022-12-21
+
+### Fixed
+
+- Fixed failing test because of user agent inconsistencies.
+
 ## [1.1.0] - 2022-12-21
 
 ### Added
