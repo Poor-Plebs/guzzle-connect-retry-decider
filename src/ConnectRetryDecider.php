@@ -15,7 +15,7 @@ final class ConnectRetryDecider
     private const DEFAULT_MAX_RETRY = 3;
 
     /**
-     * @param (Closure(int,\Psr\Http\Message\RequestInterface,\Throwable):void)|null $onBeforeRetry
+     * @param (Closure(int,\Psr\Http\Message\RequestInterface,Throwable):void)|null $onBeforeRetry
      */
     public function __construct(
         private readonly int $maxRetries = self::DEFAULT_MAX_RETRY,
