@@ -43,9 +43,9 @@
     "minimum-stability": "stable",
     "prefer-stable": true,
     "require-dev": {
-        "friendsofphp/php-cs-fixer": "^3.13.0",
-        "phpstan/phpstan": "^1.9.0",
-        "phpunit/phpunit": "^9.5.26 || ^10.0.0",
+        "friendsofphp/php-cs-fixer": "^3.17.0",
+        "phpstan/phpstan": "^1.10.16",
+        "phpunit/phpunit": "^10.2.1",
         "roave/security-advisories": "dev-latest"
     },
     "require": {
@@ -58,7 +58,7 @@
             "composer lint",
             "composer csf",
             "composer static",
-            "composer coverage"
+            "composer test"
         ],
         "ci": [
             "composer lint",
