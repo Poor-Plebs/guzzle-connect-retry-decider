@@ -6,6 +6,7 @@ namespace PoorPlebs\GuzzleConnectRetryDecider;
 
 use Closure;
 use GuzzleHttp\Exception\ConnectException;
+use Psr\Http\Client\NetworkExceptionInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Throwable;
@@ -15,7 +16,7 @@ final class ConnectRetryDecider
     private const DEFAULT_MAX_RETRY = 3;
 
     /**
-     * @param (Closure(int,\Psr\Http\Message\RequestInterface,Throwable):void)|null $onBeforeRetry
+     * @param (Closure(int,RequestInterface,Throwable):void)|null $onBeforeRetry
      */
     public function __construct(
         private readonly int $maxRetries = self::DEFAULT_MAX_RETRY,
@@ -27,9 +28,12 @@ final class ConnectRetryDecider
         int $retries,
         RequestInterface $request,
         ResponseInterface|null $response,
-        Throwable|null $exception
+        mixed $exception
     ): bool {
-        if (!$exception instanceof ConnectException) {
+        /* Guzzle 6 connect exceptions do not implement the PSR-18 interface,
+         * Guzzle 8 adds network exceptions besides connect exceptions.
+         */
+        if (!$exception instanceof ConnectException && !$exception instanceof NetworkExceptionInterface) {
             return false;
         }
 
@@ -37,24 +41,7 @@ final class ConnectRetryDecider
             return false;
         }
 
-        if ($request->getMethod() === 'GET') {
-            $this->callOnBeforeRetry($retries, $request, $exception);
-
-            return true;
-        }
-
-        $handlerContext = $exception->getHandlerContext();
-        if (
-            $handlerContext['http_code'] === 0 &&
-            (
-                $handlerContext['connect_time'] === 0.0 ||
-                (
-                    array_key_exists('scheme', $handlerContext) &&
-                    $handlerContext['scheme'] === 'HTTPS' &&
-                    $handlerContext['appconnect_time'] === 0.0
-                )
-            )
-        ) {
+        if ($request->getMethod() === 'GET' || $this->connectionNeverEstablished($exception)) {
             $this->callOnBeforeRetry($retries, $request, $exception);
 
             return true;
@@ -71,5 +58,32 @@ final class ConnectRetryDecider
         if (is_callable($this->onBeforeRetry)) {
             ($this->onBeforeRetry)($retries, $request, $exception);
         }
+    }
+
+    private function connectionNeverEstablished(Throwable $exception): bool
+    {
+        if (!$exception instanceof ConnectException) {
+            return false;
+        }
+
+        /* Guzzle 8 throws connect exceptions only while establishing the
+         * connection and dropped the handler context.
+         */
+        // @phpstan-ignore-next-line Always true when analysed against Guzzle 6 or 7.
+        if (!method_exists($exception, 'getHandlerContext')) {
+            return true;
+        }
+
+        /** @var array<string,mixed> $handlerContext */
+        $handlerContext = $exception->getHandlerContext();
+
+        return ($handlerContext['http_code'] ?? null) === 0 &&
+            (
+                ($handlerContext['connect_time'] ?? null) === 0.0 ||
+                (
+                    ($handlerContext['scheme'] ?? null) === 'HTTPS' &&
+                    ($handlerContext['appconnect_time'] ?? null) === 0.0
+                )
+            );
     }
 }
