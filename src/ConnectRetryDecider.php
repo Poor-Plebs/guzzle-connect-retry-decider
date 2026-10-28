@@ -28,7 +28,7 @@ final class ConnectRetryDecider
         int $retries,
         RequestInterface $request,
         ResponseInterface|null $response,
-        Throwable|null $exception
+        mixed $exception
     ): bool {
         /* Guzzle 6 connect exceptions do not implement the PSR-18 interface,
          * Guzzle 8 adds network exceptions besides connect exceptions.
