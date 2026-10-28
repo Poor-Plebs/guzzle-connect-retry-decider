@@ -7,6 +7,8 @@ namespace PoorPlebs\GuzzleConnectRetryDecider\Tests;
 use Closure;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ConnectException;
+use GuzzleHttp\Exception\NetworkException;
+use GuzzleHttp\Exception\NetworkTimeoutException;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
@@ -140,6 +142,8 @@ class ConnectRetryDeciderTest extends TestCase
      */
     public function it_does_not_retry_post_if_http_connection_was_established(): void
     {
+        $this->skipOnGuzzle8();
+
         $this->expectException(ConnectException::class);
         $this->expectExceptionMessage('Not retried');
 
@@ -177,6 +181,8 @@ class ConnectRetryDeciderTest extends TestCase
      */
     public function it_does_not_retry_post_if_https_connection_was_established(): void
     {
+        $this->skipOnGuzzle8();
+
         $this->expectException(ConnectException::class);
         $this->expectExceptionMessage('Not retried');
 
@@ -191,6 +197,40 @@ class ConnectRetryDeciderTest extends TestCase
                     'scheme' => 'HTTPS',
                     'appconnect_time' => 0.1,
                 ],
+            ),
+            // Will never happen.
+            new Response(200, ['Content-Type' => 'application/json'], '{"ok":true}'),
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHttpHandler);
+        $handlerStack->push(
+            Middleware::retry(new ConnectRetryDecider()),
+            'connect_retry',
+        );
+
+        $client = new Client([
+            'base_uri' => 'https://sometest.com/',
+            'handler' => $handlerStack,
+        ]);
+
+        $client->postAsync('information')->wait(true);
+    }
+
+    /**
+     * @test
+     * @covers \PoorPlebs\GuzzleConnectRetryDecider\ConnectRetryDecider
+     */
+    public function it_does_not_retry_post_on_network_failures(): void
+    {
+        $this->skipBeforeGuzzle8();
+
+        $this->expectException(NetworkException::class);
+        $this->expectExceptionMessage('Not retried');
+
+        $mockHttpHandler = new MockHandler([
+            new NetworkException(
+                'Not retried',
+                new Request('POST', 'information', ['Accept' => 'application/json', 'Content-Type' => 'application/json'], '{"some_data": "**********"}'),
             ),
             // Will never happen.
             new Response(200, ['Content-Type' => 'application/json'], '{"ok":true}'),
@@ -289,6 +329,39 @@ class ConnectRetryDeciderTest extends TestCase
      * @test
      * @covers \PoorPlebs\GuzzleConnectRetryDecider\ConnectRetryDecider
      */
+    public function it_retries_on_get_network_failures(): void
+    {
+        $this->skipBeforeGuzzle8();
+
+        $mockHttpHandler = new MockHandler([
+            new NetworkTimeoutException(
+                'cURL error 28: Operation timed out after 5001 milliseconds with 0 bytes received (see https://curl.se/libcurl/c/libcurl-errors.html) for https://sometest.com/information',
+                new Request('GET', 'information', ['Accept' => 'application/json', 'Content-Type' => 'application/json']),
+            ),
+            new Response(200, ['Content-Type' => 'application/json'], '{"ok":true}'),
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHttpHandler);
+        $handlerStack->push(
+            Middleware::retry(new ConnectRetryDecider()),
+            'connect_retry',
+        );
+
+        $client = new Client([
+            'base_uri' => 'https://sometest.com/',
+            'handler' => $handlerStack,
+        ]);
+
+        /** @var \Psr\Http\Message\ResponseInterface $response */
+        $response = $client->getAsync('information')->wait();
+
+        $this->assertSame('{"ok":true}', (string)$response->getBody());
+    }
+
+    /**
+     * @test
+     * @covers \PoorPlebs\GuzzleConnectRetryDecider\ConnectRetryDecider
+     */
     public function it_retries_on_post_connection_failures(): void
     {
         $mockHttpHandler = new MockHandler([
@@ -321,5 +394,56 @@ class ConnectRetryDeciderTest extends TestCase
         $response = $client->postAsync('information')->wait();
 
         $this->assertSame('{"ok":true}', (string)$response->getBody());
+    }
+
+    /**
+     * @test
+     * @covers \PoorPlebs\GuzzleConnectRetryDecider\ConnectRetryDecider
+     */
+    public function it_retries_post_on_connect_failures_without_handler_context(): void
+    {
+        $this->skipBeforeGuzzle8();
+
+        $mockHttpHandler = new MockHandler([
+            new ConnectException(
+                'cURL error 7: Failed to connect to sometest.com port 443 (see https://curl.se/libcurl/c/libcurl-errors.html) for https://sometest.com/information',
+                new Request('POST', 'information', ['Accept' => 'application/json', 'Content-Type' => 'application/json'], '{"some_data": "**********"}'),
+            ),
+            new Response(200, ['Content-Type' => 'application/json'], '{"ok":true}'),
+        ]);
+
+        $handlerStack = HandlerStack::create($mockHttpHandler);
+        $handlerStack->push(
+            Middleware::retry(new ConnectRetryDecider()),
+            'connect_retry',
+        );
+
+        $client = new Client([
+            'base_uri' => 'https://sometest.com/',
+            'handler' => $handlerStack,
+        ]);
+
+        /** @var \Psr\Http\Message\ResponseInterface $response */
+        $response = $client->postAsync('information')->wait();
+
+        $this->assertSame('{"ok":true}', (string)$response->getBody());
+    }
+
+    private function skipBeforeGuzzle8(): void
+    {
+        if (!class_exists(NetworkException::class)) {
+            $this->markTestSkipped('Requires the Guzzle 8 network exception hierarchy.');
+        }
+    }
+
+    /**
+     * Guzzle 8 raises connect exceptions only before a connection exists and
+     * no longer carries the handler context these scenarios rely on.
+     */
+    private function skipOnGuzzle8(): void
+    {
+        if (class_exists(NetworkException::class)) {
+            $this->markTestSkipped('Requires the Guzzle 7 connect exception handler context.');
+        }
     }
 }
